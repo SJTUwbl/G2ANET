@@ -1,13 +1,8 @@
 import numpy as np
 import torch
-from policy.vdn import VDN
-from policy.qmix import QMIX
 from policy.coma import COMA
 from policy.reinforce import Reinforce
 from policy.central_v import CentralV
-from policy.qtran_alt import QtranAlt
-from policy.qtran_base import QtranBase
-from policy.maven import MAVEN
 from torch.distributions import Categorical
 
 
@@ -18,18 +13,8 @@ class Agents:
         self.n_agents = args.n_agents
         self.state_shape = args.state_shape
         self.obs_shape = args.obs_shape
-        if args.alg == 'vdn':
-            self.policy = VDN(args)
-        elif args.alg == 'qmix':
-            self.policy = QMIX(args)
-        elif args.alg == 'coma':
+        if args.alg == 'coma':
             self.policy = COMA(args)
-        elif args.alg == 'qtran_alt':
-            self.policy = QtranAlt(args)
-        elif args.alg == 'qtran_base':
-            self.policy = QtranBase(args)
-        elif args.alg == 'maven':
-            self.policy = MAVEN(args)
         elif args.alg == 'central_v':
             self.policy = CentralV(args)
         elif args.alg == 'reinforce':
@@ -145,21 +130,20 @@ class CommAgents:
         print('Init CommAgents')
 
     # 根据weights得到概率，然后再根据epsilon选动作
-    def choose_action(self, weights, avail_actions, epsilon, evaluate=False):
+    def choose_action(self, weights, epsilon, evaluate=False):
         weights = weights.unsqueeze(0)
-        avail_actions = torch.tensor(avail_actions, dtype=torch.float32).unsqueeze(0)
-        action_num = avail_actions.sum(dim=1, keepdim=True).float().repeat(1, avail_actions.shape[-1])  # 可以选择的动作的个数
+        # avail_actions = torch.tensor(avail_actions, dtype=torch.float32).unsqueeze(0)
+        # action_num = avail_actions.sum(dim=1, keepdim=True).float().repeat(1, avail_actions.shape[-1])  # 可以选择的动作的个数
         # 先将Actor网络的输出通过softmax转换成概率分布
         prob = torch.nn.functional.softmax(weights, dim=-1)
         # 在训练的时候给概率分布添加噪音
-        prob = ((1 - epsilon) * prob + torch.ones_like(prob) * epsilon / action_num)
-        prob[avail_actions == 0] = 0.0  # 不能执行的动作概率为0
+        prob = ((1 - epsilon) * prob + torch.ones_like(prob) * epsilon / self.args.n_actions)
+        # prob[avail_actions == 0] = 0.0  # 不能执行的动作概率为0
 
         """
         不能执行的动作概率为0之后，prob中的概率和不为1，这里不需要进行正则化，因为torch.distributions.Categorical
         会将其进行正则化。要注意在训练的过程中没有用到Categorical，所以训练时取执行的动作对应的概率需要再正则化。
         """
-
         if epsilon == 0 and evaluate:
             # 测试时直接选最大的
             action = torch.argmax(prob)
@@ -168,7 +152,7 @@ class CommAgents:
         return action
 
     def get_action_weights(self, obs, last_action):
-        obs = torch.tensor(obs, dtype=torch.float32)
+        obs = torch.tensor(obs, dtype=torch.float32).squeeze()
         last_action = torch.tensor(last_action, dtype=torch.float32)
         inputs = list()
         inputs.append(obs)

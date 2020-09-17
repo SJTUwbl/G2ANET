@@ -1,11 +1,28 @@
 from runner import Runner
-from smac.env import StarCraft2Env
+import argparse
+import signal
+from env_wrappers import *
+from ic3net_envs.traffic_junction_env import TrafficJunctionEnv
 from common.arguments import get_common_args, get_coma_args, get_mixer_args, get_centralv_args, get_reinforce_args, get_commnet_args, get_g2anet_args
+
+
 
 
 if __name__ == '__main__':
     for i in range(8):
-        args = get_common_args()
+        parser = get_common_args()
+        args = parser.parse_args()
+
+        if args.env_name == 'traffic_junction':
+            env = TrafficJunctionEnv()
+            if args.display:
+                env.init_curses()
+            env.init_args(parser)
+        args = parser.parse_args()
+        env.multi_agent_init(args)
+        env = EnvWrapper(env)
+
+
         if args.alg.find('coma') > -1:
             args = get_coma_args(args)
         elif args.alg.find('central_v') > -1:
@@ -18,17 +35,20 @@ if __name__ == '__main__':
             args = get_commnet_args(args)
         if args.alg.find('g2anet') > -1:
             args = get_g2anet_args(args)
-        env = StarCraft2Env(map_name=args.map,
-                            step_mul=args.step_mul,
-                            difficulty=args.difficulty,
-                            game_version=args.game_version,
-                            replay_dir=args.replay_dir)
+
         env_info = env.get_env_info()
         args.n_actions = env_info["n_actions"]
-        args.n_agents = env_info["n_agents"]
         args.state_shape = env_info["state_shape"]
         args.obs_shape = env_info["obs_shape"]
-        args.episode_limit = env_info["episode_limit"]
+        print(args)
+
+        def signal_handler(signal, frame):
+            print('You pressed Ctrl+C! Exiting gracefully.')
+            if args.display:
+                env.end_display()
+            sys.exit(0)
+        signal.signal(signal.SIGINT, signal_handler)
+
         runner = Runner(env, args)
         if args.learn:
             runner.run(i)

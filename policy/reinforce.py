@@ -36,7 +36,7 @@ class Reinforce:
         if self.args.cuda:
             self.eval_rnn.cuda()
 
-        self.model_dir = args.model_dir + '/' + args.alg + '/' + args.map
+        self.model_dir = args.model_dir + '/' + args.alg + '/' + args.env_name
         # 如果存在模型则加载模型
         if self.args.load_model:
             if os.path.exists(self.model_dir + '/rnn_params.pkl'):
@@ -57,6 +57,7 @@ class Reinforce:
         self.eval_hidden = None
 
     def learn(self, batch, max_episode_len, train_step, epsilon):
+        print(batch['r'])
         episode_num = batch['o'].shape[0]
         self.init_hidden(episode_num)
         for key in batch.keys():  # 把batch里的数据转化成tensor
@@ -64,7 +65,7 @@ class Reinforce:
                 batch[key] = torch.tensor(batch[key], dtype=torch.long)
             else:
                 batch[key] = torch.tensor(batch[key], dtype=torch.float32)
-        u, r, avail_u, terminated = batch['u'], batch['r'],  batch['avail_u'], batch['terminated']
+        u, r, terminated = batch['u'], batch['r'], batch['terminated']
         mask = (1 - batch["padded"].float())  # 用来把那些填充的经验的TD-error置0，从而不让它们影响到学习
         if self.args.cuda:
             r = r.cuda()
@@ -130,7 +131,7 @@ class Reinforce:
 
     def _get_action_prob(self, batch, max_episode_len, epsilon):
         episode_num = batch['o'].shape[0]
-        avail_actions = batch['avail_u']
+        # avail_actions = batch['avail_u']
         action_prob = []
         for transition_idx in range(max_episode_len):
             inputs = self._get_actor_inputs(batch, transition_idx)  # 给obs加last_action、agent_id
@@ -147,8 +148,11 @@ class Reinforce:
         # 把该列表转化成(episode个数, max_episode_len， n_agents，n_actions)的数组
         action_prob = torch.stack(action_prob, dim=1).cpu()
 
-        action_num = avail_actions.sum(dim=-1, keepdim=True).float().repeat(1, 1, 1, avail_actions.shape[-1])   # 可以选择的动作的个数
+        # action_num = avail_actions.sum(dim=-1, keepdim=True).float().repeat(1, 1, 1, avail_actions.shape[-1])   # 可以选择的动作的个数
         action_prob = ((1 - epsilon) * action_prob + torch.ones_like(action_prob) * epsilon / action_num)
+        print('action_prob')
+        print(action_prob.sum(dim=-1, keepdim=True))
+
         action_prob[avail_actions == 0] = 0.0  # 不能执行的动作概率为0
 
         # 因为上面把不能执行的动作概率置为0，所以概率和不为1了，这里要重新正则化一下。执行过程中Categorical会自己正则化。

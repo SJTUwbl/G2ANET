@@ -9,17 +9,15 @@ Here are the param for the training
 def get_common_args():
     parser = argparse.ArgumentParser()
     # the environment setting
-    parser.add_argument('--difficulty', type=str, default='7', help='the difficulty of the game')
-    parser.add_argument('--game_version', type=str, default='latest', help='the version of the game')
-    parser.add_argument('--map', type=str, default='3m', help='the map of the game')
+    parser.add_argument('--episode_limit', type=int, default=100, help='force to end the game after this many steps')
+    parser.add_argument('--env_name', type=str, default='traffic_junction', help='the env_name of the game')
     parser.add_argument('--seed', type=int, default=123, help='random seed')
-    parser.add_argument('--step_mul', type=int, default=8, help='how many steps to make an action')
     parser.add_argument('--replay_dir', type=str, default='', help='absolute path to save the replay')
-    # The alternative algorithms are vdn, coma, central_v, qmix, qtran_base,
-    # qtran_alt, reinforce, coma+commnet, central_v+commnet, reinforce+commnet，
+    
+    # The alternative algorithms are coma, central_v, reinforce
     # coma+g2anet, central_v+g2anet, reinforce+g2anet, maven
     parser.add_argument('--alg', type=str, default='qmix', help='the algorithm to train the agent')
-    parser.add_argument('--last_action', type=bool, default=True, help='whether to use the last action to choose action')
+    parser.add_argument('--last_action', type=bool, default=False, help='whether to use the last action to choose action')
     parser.add_argument('--reuse_network', type=bool, default=True, help='whether to use one network for all agents')
     parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
     parser.add_argument('--optimizer', type=str, default="RMS", help='optimizer')
@@ -29,8 +27,9 @@ def get_common_args():
     parser.add_argument('--load_model', type=bool, default=False, help='whether to load the pretrained model')
     parser.add_argument('--learn', type=bool, default=True, help='whether to train the model')
     parser.add_argument('--cuda', type=bool, default=False, help='whether to use the GPU')
-    args = parser.parse_args()
-    return args
+    parser.add_argument('--n_agents', type=int, default=10, help="Number of agents")
+    parser.add_argument('--display', action="store_true", default=False, help="Use to display environment")
+    return parser
 
 
 # arguments of coma

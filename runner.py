@@ -1,6 +1,7 @@
 import numpy as np
 import os
-from common.rollout import RolloutWorker, CommRolloutWorker
+import sys
+from common.rollout import CommRolloutWorker
 from agent.agent import Agents, CommAgents
 from common.replay_buffer import ReplayBuffer
 import matplotlib.pyplot as plt
@@ -23,7 +24,7 @@ class Runner:
         self.episode_rewards = []
 
         # 用来保存plt和pkl
-        self.save_path = self.args.result_dir + '/' + args.alg + '/' + args.map
+        self.save_path = self.args.result_dir + '/' + args.alg + '/' + args.env_name
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
 
