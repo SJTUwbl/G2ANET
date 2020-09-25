@@ -2,6 +2,7 @@ import time
 import numpy as np
 import torch
 from gym import spaces
+from inspect import getargspec
 
 class EnvWrapper(object):
     '''
@@ -12,9 +13,9 @@ class EnvWrapper(object):
 
     def get_env_info(self):
         env_info = {}
-        env_info['state_shape'] = self.observation_dim
-        env_info['obs_shape']   = self.observation_dim
-        env_info['n_actions']   = self.num_actions
+        env_info['state_shape']     = self.observation_dim
+        env_info['obs_shape']       = self.observation_dim
+        env_info['n_actions']       = self.num_actions
         return env_info
 
     @property
@@ -59,8 +60,17 @@ class EnvWrapper(object):
     def action_space(self):
         return self.env.action_space
 
-    def reset(self):
-        obs = self.env.reset()
+    # def reset(self):
+    #     obs = self.env.reset()
+    #     obs = self._flatten_obs(obs)
+    #     return obs
+    def reset(self, epoch):
+        reset_args = getargspec(self.env.reset).args
+        if 'epoch' in reset_args:
+            obs = self.env.reset(epoch)
+        else:
+            obs = self.env.reset()
+
         obs = self._flatten_obs(obs)
         return obs
 
@@ -74,11 +84,12 @@ class EnvWrapper(object):
     def step(self, action):
         # TODO: Modify all environments to take list of action
         # instead of doing this
-        print('action')
-        print(action)
         obs, r, done, info = self.env.step(action)
         obs = self._flatten_obs(obs)
-        return (obs, r, done, info)
+        if done:
+            return (obs, r, 1, info)
+        else:
+            return (obs, r, 0, info)
 
     def reward_terminal(self):
         if hasattr(self.env, 'reward_terminal'):
@@ -96,7 +107,7 @@ class EnvWrapper(object):
                 _obs.append(np.concatenate(ag_obs))
             obs = np.stack(_obs)
 
-        obs = obs.reshape(1, -1, self.observation_dim)
+        obs = obs.reshape(-1, self.observation_dim)
         # obs = torch.from_numpy(obs).double()
         return obs
 

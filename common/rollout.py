@@ -20,16 +20,14 @@ class CommRolloutWorker:
         self.min_epsilon = args.min_epsilon
         print('Init CommRolloutWorker')
 
-    def generate_episode(self, episode_num=None, evaluate=False):
+    def generate_episode(self, epoch, episode_num=None, evaluate=False):
         if self.args.replay_dir != '' and evaluate and episode_num == 0:  # prepare for save replay
             self.env.close()
-        o, u, r, u_onehot, terminate, padded = [], [], [], [], [], []
-        obs = self.env.reset()
+        o, u, r, u_onehot, complete, alive_mask = [], [], [], [], [], []
+        obs = self.env.reset(epoch)
         terminated = False
-        win_tag = False
         step = 0
         episode_reward = 0
-        last_action = np.zeros((self.args.n_agents, self.args.n_actions))
         self.agents.policy.init_hidden(1)
         epsilon = 0 if evaluate else self.epsilon
         if self.args.epsilon_anneal_scale == 'episode':
@@ -42,11 +40,10 @@ class CommRolloutWorker:
             actions, actions_onehot = [], []
 
             # get the weights of all actions for all agents
-            weights = self.agents.get_action_weights(np.array(obs), last_action)
+            weights = self.agents.get_action_weights(np.array(obs))
 
             # choose action for each agent
             for agent_id in range(self.n_agents):
-                # avail_action = self.env.get_avail_agent_actions(agent_id)
                 action = self.agents.choose_action(weights[agent_id], epsilon, evaluate)
 
                 # generate onehot vector of th action
@@ -54,69 +51,33 @@ class CommRolloutWorker:
                 action_onehot[action] = 1
                 actions.append(action.numpy())
                 actions_onehot.append(action_onehot)
-                # avail_actions.append(avail_action)
-                last_action[agent_id] = action_onehot
             actions = np.array(actions)
-            print(actions)
 
             next_obs, reward, terminated, info = self.env.step(actions)
-            win_tag = True if terminated and 'battle_won' in info and info['battle_won'] else False
             o.append(obs)
-            # s.append(state)
             u.append(np.reshape(actions, [self.n_agents, 1]))
             u_onehot.append(actions_onehot)
-            # avail_u.append(avail_actions)
-            r.append([reward])
-            terminate.append([terminated])
-            padded.append([0.])
+            r.append(reward)
+            complete.append(1 - info['is_completed'])
+            alive_mask.append(info['alive_mask'])
             episode_reward += reward
             obs = next_obs
             step += 1
-            # if terminated:
-            #     time.sleep(1)
             if self.args.epsilon_anneal_scale == 'step':
                 epsilon = epsilon - self.anneal_epsilon if epsilon > self.min_epsilon else epsilon
+
         # last obs
         o.append(obs)
-        # s.append(state)
         o_next = o[1:]
-        # s_next = s[1:]
         o = o[:-1]
-        # s = s[:-1]
-        # get avail_action for last obs，because target_q needs avail_action in training
-        # avail_actions = []
-        # for agent_id in range(self.n_agents):
-        #     avail_action = self.env.get_avail_agent_actions(agent_id)
-        #     avail_actions.append(avail_action)
-        # avail_u.append(avail_actions)
-        # avail_u_next = avail_u[1:]
-        # avail_u = avail_u[:-1]
-
-        # if step < self.episode_limit，padding = 1
-        for i in range(step, self.episode_limit):
-            o.append(np.zeros((self.n_agents, self.obs_shape)))
-            u.append(np.zeros([self.n_agents, 1]))
-            # s.append(np.zeros(self.state_shape))
-            r.append([0.])
-            o_next.append(np.zeros((self.n_agents, self.obs_shape)))
-            # s_next.append(np.zeros(self.state_shape))
-            u_onehot.append(np.zeros((self.n_agents, self.n_actions)))
-            # avail_u.append(np.zeros((self.n_agents, self.n_actions)))
-            # avail_u_next.append(np.zeros((self.n_agents, self.n_actions)))
-            padded.append([1.])
-            terminate.append([1.])
 
         episode = dict(o=o.copy(),
-                       # s=s.copy(),
                        u=u.copy(),
                        r=r.copy(),
-                       # avail_u=avail_u.copy(),
                        o_next=o_next.copy(),
-                       # s_next=s_next.copy(),
-                       # avail_u_next=avail_u_next.copy(),
                        u_onehot=u_onehot.copy(),
-                       padded=padded.copy(),
-                       terminated=terminate.copy()
+                       complete=complete.copy(),
+                       alive_mask=alive_mask.copy()
                        )
         # add episode dim
         for key in episode.keys():
@@ -127,4 +88,6 @@ class CommRolloutWorker:
         if evaluate and episode_num == self.args.evaluate_epoch - 1 and self.args.replay_dir != '':
             self.env.save_replay()
             self.env.close()
-        return episode, episode_reward, win_tag
+        success = self.env.get_stat()['success']
+        add_rate = self.env.get_stat()['add_rate']
+        return episode, success, add_rate
