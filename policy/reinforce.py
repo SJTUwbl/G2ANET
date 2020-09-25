@@ -62,7 +62,7 @@ class Reinforce:
             r = r.cuda()
             u = u.cuda()
             mini_mask = mini_mask.cuda()
-            alive_mask = alive_mask.cude()
+            alive_mask = alive_mask.cuda()
 
         # 得到每条经验的return, (episode_num, max_episode_len， n_agents)
         n_return = self._get_returns(r, mini_mask, alive_mask, max_episode_len)
