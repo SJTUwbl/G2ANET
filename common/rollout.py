@@ -84,10 +84,6 @@ class CommRolloutWorker:
             episode[key] = np.array([episode[key]])
         if not evaluate:
             self.epsilon = epsilon
-            # print('Epsilon is ', self.epsilon)
-        if evaluate and episode_num == self.args.evaluate_epoch - 1 and self.args.replay_dir != '':
-            self.env.save_replay()
-            self.env.close()
         success = self.env.get_stat()['success']
         add_rate = self.env.get_stat()['add_rate']
         return episode, success, add_rate

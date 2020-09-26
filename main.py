@@ -28,6 +28,7 @@ if __name__ == '__main__':
                 env.init_curses()
             env.init_args(parser)
         args = parser.parse_args()
+        print('learn:', args.learn)
         if args.seed == -1:
             args.seed = random.randint(0,10000)
         set_seed(args)
@@ -53,10 +54,11 @@ if __name__ == '__main__':
 
         runner = Runner(env, args)
         if args.learn:
+            print('no')
             runner.run(i)
         else:
-            win_rate, _ = runner.evaluate()
-            print('The win rate of {} is  {}'.format(args.alg, win_rate))
+            win_rate = runner.evaluate()
+            print('The win rate of {} is  {:.2f}'.format(args.alg, win_rate))
             break
         env.close()
 

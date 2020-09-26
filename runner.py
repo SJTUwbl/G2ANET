@@ -71,6 +71,15 @@ class Runner:
         print('random seed', self.args.seed)
         self.plt(num)
 
+    def evaluate(self):
+        print('yes')
+        epoch_success = 0
+        for epoch in range(self.args.evaluate_epoch):
+            _, success, _ = self.rolloutWorker.generate_episode(epoch, evaluate=True)
+            epoch_success += success
+        return epoch_success / self.args.evaluate_epoch
+
+
     def plt(self, num):
         plt.figure()
         plt.axis([0, self.args.n_epoch, 0, 1])

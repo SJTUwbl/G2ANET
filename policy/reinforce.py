@@ -29,11 +29,11 @@ class Reinforce:
         if self.args.cuda:
             self.eval_rnn.cuda()
 
-        self.model_dir = args.model_dir + '/' + args.alg + '/' + args.env_name
+        self.model_dir = args.model_dir + '/' + args.alg + '/' + args.env_name + '/'
         # 如果存在模型则加载模型
-        if self.args.load_model:
-            if os.path.exists(self.model_dir + '/rnn_params.pkl'):
-                path_rnn = self.model_dir + '/rnn_params.pkl'
+        if self.args.load != '':
+            if os.path.exists(self.model_dir + self.args.load + '_rnn_params.pkl'):
+                path_rnn = self.model_dir + self.args.load + '_rnn_params.pkl'
                 map_location = 'cuda:0' if self.args.cuda else 'cpu'
                 self.eval_rnn.load_state_dict(torch.load(path_rnn, map_location=map_location))
                 print('Successfully load the model: {}'.format(path_rnn))

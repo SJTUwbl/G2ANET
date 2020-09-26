@@ -13,8 +13,9 @@ def get_common_args():
     parser.add_argument('--epoch_size', type=int, default=10, help='the number of batch in one epoch')
     parser.add_argument('--n_episodes', type=int, default=50, help='the number of the episodes in one batch')
     parser.add_argument('--episode_limit', type=int, default=20, help='force to end the game after this many steps')
+    parser.add_argument('--evaluate_epoch', type=int, default=50, help='how many episodes to evaluate the model')
     parser.add_argument('--env_name', type=str, default='traffic_junction', help='the env_name of the game')
-    parser.add_argument('--seed', type=int, default=-1, help='random seed')
+    parser.add_argument('--seed', type=int, default=9072, help='random seed')
     parser.add_argument('--replay_dir', type=str, default='', help='absolute path to save the replay')
     
     # The alternative algorithms are coma, central_v, reinforce
@@ -26,11 +27,12 @@ def get_common_args():
     parser.add_argument('--optimizer', type=str, default="RMS", help='optimizer')
     parser.add_argument('--model_dir', type=str, default='./model', help='model directory of the policy')
     parser.add_argument('--result_dir', type=str, default='./result', help='result directory of the policy')
-    parser.add_argument('--load_model', type=bool, default=False, help='whether to load the pretrained model')
-    parser.add_argument('--learn', type=bool, default=True, help='whether to train the model')
+    # parser.add_argument('--load_model', type=bool, default=False, help='whether to load the pretrained model')
+    parser.add_argument('--load', type=str, default='', help='which model to load')
+    parser.add_argument('--learn', type=bool, default=False, help='whether to train the model')
     parser.add_argument('--cuda', type=bool, default=False, help='whether to use the GPU')
     parser.add_argument('--nagents', type=int, default=5, help="Number of agents")
-    parser.add_argument('--display', action="store_true", default=False, help="Use to display environment")
+    parser.add_argument('--display', action="store_true", default=False, help="Whether to display environment")
     return parser
 
 
@@ -168,9 +170,6 @@ def get_reinforce_args(args):
     args.anneal_epsilon = 0.00064
     args.min_epsilon = 0.02
     args.epsilon_anneal_scale = 'epoch'
-
-    # how often to evaluate
-    args.evaluate_cycle = 100
 
     # how many batches to save the model
     args.save_cycle = args.epoch_size
